@@ -1,0 +1,124 @@
+---
+title: "Growth and Stability"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#Part 1
+Loading of data and creation of data
+```{r}
+library(tidyverse)
+library(deSolve)
+forest_size <- data.frame(Ccurr=seq(from=1, to=1000, by=50))
+source("dharvest.R")
+
+
+```
+
+Equation for low harvest intensity
+```{r}
+low_harvest <- 0
+growth_rate <- list(harv=low_harvest, K=80, r=0.2, mincarbon=5)
+
+forest_size$derivative_low = unlist(sapply(findstable$Ccurr, dharvest, parm=growth_rate, Time=NULL))
+```
+
+
+Equation for medium harvest intensity
+```{r}
+mid_harvest <- 3
+growth_rate <- list(harv=mid_harvest, K=80, r=0.2, mincarbon=5)
+forest_size$derivative_mid = unlist(sapply(findstable$Ccurr, dharvest, parm=growth_rate, Time=NULL))
+```
+
+
+Equation for high harvest intensity
+```{r}
+high_harvest <- 5
+growth_rate <- list(harv=high_harvest, K=80, r=0.2, mincarbon=5)
+forest_size$derivative_high = unlist(sapply(findstable$Ccurr, dharvest, parm=growth_rate, Time=NULL))
+```
+
+
+Plot our harvest intensities 
+```{r}
+df <- gather(forest_size, key="H_Harvest_Rate", value="value", -Ccurr)
+
+
+ggplot(df, aes(Ccurr, value, color=H_Harvest_Rate))+
+  geom_line()+
+  geom_hline(yintercept = 0, col="black", size = 1.25)+
+  ggtitle("Harvest Growth Rate")+
+  xlab("Forest Population (kgC)")+
+  ylab("Rate of Change in Population (kgC/year)") +
+  theme_classic() +
+   theme(legend.title = element_blank()) +
+    scale_colour_manual(name="", values=c(derivative_high = "#999999", derivative_low = "#E69F00" , derivative_mid = "#56B4E9"))
+```
+
+At what sizes does the forest stop accumulating carbon in each harvest case. Are these points stable? 
+When the rate of change in population is equal to zero the forest will stop accumulating carbon. When the harvest intensity is zero this occurs at 80kgC. When the harvest intensity is three this occurs at 60kgC. When the harvest intensity is five, this occurs at 8kgC. The harvest intensity of five is an unstable scenario. Forest population is depleted so quickly it can not again regenerate to a population rate of change of 0. 
+
+
+##Part 2
+
+Scenario One: initial carbon stock of 100kgC, growth rate of 5% per year, maximum possible forest carbon of 500kgC, and a harvest rate of 2 kgC/year
+```{r}
+years <- seq(from=1, to=50)
+Pinitial <- 100
+growth_rate <- list(harv=2, K=500, r=0.05, mincarbon=5)
+ode_1 = ode(Pinitial,years, dharvest, growth_rate)
+colnames(ode_1)=c("Time","Carbon")
+ode_1_df <- as.data.frame(ode_1)
+
+
+```
+
+
+Scenario Two: same scenario by doubled growth rate
+```{r}
+
+years <- seq(from=1, to=50)
+Pinitial <- 100
+growth_rate <- list(harv=2, K=500, r=0.1, mincarbon=5)
+ode_2 <- ode(Pinitial,years, dharvest, growth_rate)
+colnames(ode_2)=c("Time","Carbon")
+ode_2_df <- as.data.frame(ode_2)
+
+
+```
+
+
+Scenario Three:same scenario by doubled harvest rate
+```{r}
+years <- seq(from=1, to=50)
+Pinitial <- 100
+growth_rate <- list(harv=4, K=500, r=0.05, mincarbon=5)
+ode_3 <- ode(Pinitial,years, dharvest, growth_rate)
+colnames(ode_3)=c("Time","Carbon")
+ode_3_df <- as.data.frame(ode_3)
+
+
+```
+
+
+
+Plot for three scenarios
+```{r}
+ggplot(as.data.frame(ode_1), aes(x = Time, y = Carbon, colour = "Baseline"))+
+  geom_line()+
+  geom_line(data = as.data.frame(ode_2), aes(x = Time, y = Carbon, colour = "dbl_growth"))+
+  geom_line(data = as.data.frame(ode_3), aes(x = Time, y = Carbon, colour = "dbl_harvest"))+
+  ggtitle("Change in Forest Size Through Various Climate Scenarios")+
+  xlab("Year")+
+  ylab("Forest Carbon (kgC)")+
+  scale_colour_manual(name="Climate Scenarios", values=c(Baseline = "black", dbl_growth = "#999999" , dbl_harvest = "#56B4E9")) +
+  theme_classic()
+```
+
+What is the highest sustainable harvest rate you can achieve and still have a stable forest for the above scenario?
+When four kgC per year are harvested the forest remains at 100kgC(does not change in size) so four kgC per year is the highest sustainable rate.
